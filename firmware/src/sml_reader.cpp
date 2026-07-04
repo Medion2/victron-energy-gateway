@@ -1,4 +1,5 @@
 #include "sml_reader.h"
+#include "sml_parser.h"
 #include "logger.h"
 
 #if __has_include("config.h")
@@ -41,11 +42,13 @@ static void finishTelegram() {
   telegramCount++;
 
   logInfo(String("SML Telegramm empfangen, Bytes: ") + String(bufferLen));
+  smlParserParseHex(lastTelegramHex);
   resetBuffer();
 }
 
 void smlSetup() {
   SmlSerial.begin(VEG_SML_BAUD, SERIAL_8N1, VEG_IR_RX_PIN, VEG_IR_TX_PIN);
+  smlParserReset();
   logInfo(String("SML Reader gestartet, Baudrate: ") + String(VEG_SML_BAUD));
   logInfo(String("IR RX Pin: ") + String(VEG_IR_RX_PIN));
 }
@@ -74,7 +77,9 @@ String smlStatusJson() {
   json += "\"telegram_count\":" + String(telegramCount) + ",";
   json += "\"last_age_ms\":" + String(lastTelegramTime == 0 ? 0 : millis() - lastTelegramTime) + ",";
   json += "\"baud\":" + String(VEG_SML_BAUD) + ",";
-  json += "\"rx_pin\":" + String(VEG_IR_RX_PIN);
+  json += "\"rx_pin\":" + String(VEG_IR_RX_PIN) + ",";
+  json += "\"parser\":" + smlParserStatusJson() + ",";
+  json += "\"obis\":" + smlParserObisJson();
   json += "}";
   return json;
 }
