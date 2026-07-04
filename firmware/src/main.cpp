@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "wifi_manager.h"
 #include "webserver.h"
+#include "sml_reader.h"
 
 static unsigned long lastHeartbeat = 0;
 
@@ -40,11 +41,13 @@ void setup() {
 
   wifiSetup();
   webserverSetup();
+  smlSetup();
 }
 
 void loop() {
   wifiLoop();
   webserverLoop();
+  smlLoop();
 
   if (millis() - lastHeartbeat > 30000) {
     lastHeartbeat = millis();
