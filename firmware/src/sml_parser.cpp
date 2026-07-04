@@ -10,7 +10,6 @@ static bool containsHex(const String &haystack, const String &needle) {
 }
 
 static String detectManufacturer(const String &hex) {
-  // 4C 47 5A = LGZ = Landis+Gyr
   if (containsHex(hex, "4C 47 5A")) return "Landis+Gyr";
   return "Unbekannt";
 }
@@ -75,46 +74,61 @@ static bool readSignedInteger(const uint8_t *data, size_t len, size_t pos, int64
     raw = (raw << 8) | data[pos + 1 + i];
   }
 
-  // Vorzeichen erweitern, falls nötig
   int shift = (8 - bytes) * 8;
   raw = (raw << shift) >> shift;
   nextPos = pos + 1 + bytes;
   return true;
 }
 
+static bool extractScaler(const uint8_t *data, size_t len, size_t start, size_t end, int &scalerOut) {
+  for (size_t p = start; p + 1 < end && p + 1 < len; p++) {
+    if (data[p] == 0x52) {
+      scalerOut = (int8_t)data[p + 1];
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool extractFirstIntegerAfter(const uint8_t *data, size_t len, size_t start, size_t end, int64_t &rawOut) {
+  for (size_t p = start; p < end && p < len; p++) {
+    int64_t raw = 0;
+    size_t next = p;
+    if (readSignedInteger(data, len, p, raw, next)) {
+      rawOut = raw;
+      return true;
+    }
+  }
+  return false;
+}
+
 static bool extractValueNearObis(const uint8_t *data, size_t len, const uint8_t *obis, double &valueOut) {
   int idx = findPattern(data, len, obis, 7);
   if (idx < 0) return false;
 
-  // In SML steht der Wert meistens kurz nach OBIS, scaler und unit.
-  // Diese Routine ist absichtlich defensiv und wird in den nächsten Versionen verfeinert.
-  int64_t lastInteger = 0;
-  bool foundInteger = false;
+  size_t start = (size_t)idx + 7;
+  size_t end = min(len, (size_t)idx + 96);
+
   int scaler = 0;
-  bool foundScaler = false;
-  size_t searchEnd = min(len, (size_t)idx + 80);
+  bool hasScaler = extractScaler(data, len, start, end, scaler);
 
-  for (size_t p = idx + 7; p < searchEnd; p++) {
-    if (data[p] == 0x52 && p + 1 < len) {
-      int8_t s = (int8_t)data[p + 1];
-      scaler = s;
-      foundScaler = true;
-      p++;
-      continue;
-    }
-
-    int64_t raw = 0;
-    size_t next = p;
-    if (readSignedInteger(data, len, p, raw, next)) {
-      lastInteger = raw;
-      foundInteger = true;
-      p = next - 1;
+  // Nach dem Scaler kommt in vielen SML ListEntries der eigentliche Wert.
+  // Dadurch vermeiden wir, Status/Zeit als Messwert zu lesen.
+  size_t valueStart = start;
+  if (hasScaler) {
+    for (size_t p = start; p + 1 < end && p + 1 < len; p++) {
+      if (data[p] == 0x52) {
+        valueStart = p + 2;
+        break;
+      }
     }
   }
 
-  if (!foundInteger) return false;
-  valueOut = (double)lastInteger;
-  if (foundScaler) valueOut = valueOut * pow(10.0, scaler);
+  int64_t raw = 0;
+  if (!extractFirstIntegerAfter(data, len, valueStart, end, raw)) return false;
+
+  valueOut = (double)raw;
+  if (hasScaler) valueOut = valueOut * pow(10.0, scaler);
   return true;
 }
 
