@@ -2,6 +2,7 @@
 #include "version.h"
 #include "logger.h"
 #include "wifi_manager.h"
+#include "webserver.h"
 
 static unsigned long lastHeartbeat = 0;
 
@@ -38,10 +39,12 @@ void setup() {
   printSystemInfo();
 
   wifiSetup();
+  webserverSetup();
 }
 
 void loop() {
   wifiLoop();
+  webserverLoop();
 
   if (millis() - lastHeartbeat > 30000) {
     lastHeartbeat = millis();
