@@ -1,0 +1,42 @@
+name: PlatformIO Build
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Prepare config
+        run: |
+          cp firmware/include/config.example.h firmware/include/config.h
+
+      - name: Build firmware
+        working-directory: firmware
+        run: pio run
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-esp32-s3-devkitc-1
+          path: firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin
