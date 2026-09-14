@@ -1,5 +1,5 @@
 #pragma once
 
-#define VEG_VERSION "0.3.1-dev"
-#define VEG_NAME "Victron Energy Gateway"
-#define VEG_CODENAME "Landis MQTT Engine"
+#define VEG_VERSION "0.4.0-dev"
+#define VEG_NAME "Landis+Gyr E320 Reader"
+#define VEG_CODENAME "SML OTA Test"
