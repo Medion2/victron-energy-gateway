@@ -1,0 +1,9 @@
+# Local/private files
+*.bin
+*.elf
+*.map
+*.log
+secrets.h
+credentials.h
+.idea/
+.vscode/
